@@ -19,14 +19,25 @@ class RerankOnnxBackend(RerankBackend):
         sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
         sess_options.intra_op_num_threads = 0
         sess_options.inter_op_num_threads = 0
+        debug_logger.info(f"RerankOnnxBackend __init__ use_cpu: {use_cpu}")
         if use_cpu:
             providers = ['CPUExecutionProvider']
         else:
             providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+        
+        debug_logger.info(f"RerankOnnxBackend Available providers: {onnxruntime.get_available_providers()}")
+        
         self.session = onnxruntime.InferenceSession(LOCAL_RERANK_MODEL_PATH, sess_options, providers=providers)
+    
+        debug_logger.info(f"RerankOnnxBackend Current provider: {self.session.get_providers()}")
 
     def inference(self, batch):
         # 准备输入数据
+            # 添加 GPU 内存使用情况日志
+        if not self.use_cpu:
+            debug_logger.info("GPU Memory Usage before inference:")
+            debug_logger.info(f"CUDA device count: {onnxruntime.get_device()}")
+    
         inputs = {self.session.get_inputs()[0].name: batch['input_ids'],
                   self.session.get_inputs()[1].name: batch['attention_mask']}
 
@@ -35,10 +46,11 @@ class RerankOnnxBackend(RerankBackend):
 
         # 执行推理 输出为logits
         result = self.session.run(None, inputs)  # None表示获取所有输出
-        # debug_logger.info(f"rerank result: {result}")
+        debug_logger.info(f"RerankOnnxBackend rerank result: {result}")
 
         # 应用sigmoid函数
         # sigmoid_scores = 1 / (1 + np.exp(-np.array(result[0])))
         sigmoid_scores = sigmoid(np.array(result[0]))
 
+        debug_logger.info(f"Inference performed on: {self.session.get_providers()[0]}")
         return sigmoid_scores.reshape(-1).tolist()

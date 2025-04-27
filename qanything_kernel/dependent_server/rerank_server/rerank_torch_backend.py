@@ -12,7 +12,9 @@ class RerankTorchBackend(RerankBackend):
         self.return_tensors = "pt"
         self._model = AutoModelForSequenceClassification.from_pretrained(LOCAL_RERANK_PATH,
                                                                          return_dict=False)
-        self.device = torch.device('cpu')
+        self.device = torch.device('GPU' if torch.cuda.is_available() and not use_cpu else 'CPU')
+        debug_logger.info(f"RerankTorchBackend __init__ use_cpu: {use_cpu}")
+        debug_logger.info(f"RerankTorchBackend Current provider: {self.device}")
         self._model = self._model.to(self.device)
         print("rerank device:", self.device)
 
@@ -24,7 +26,7 @@ class RerankTorchBackend(RerankBackend):
         start_time = time.time()
         result = self._model(**inputs, return_dict=True)
 
-        debug_logger.info(f"rerank infer time: {time.time() - start_time}")
+        debug_logger.info(f"RerankTorchBackend infer time: {time.time() - start_time}")
         sigmoid_scores = torch.sigmoid(result.logits.view(-1, )).cpu().detach().numpy()
 
         return sigmoid_scores.tolist()

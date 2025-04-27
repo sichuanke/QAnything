@@ -294,6 +294,8 @@ async def upload_faqs(req: request):
     chunk_size = safe_get(req, 'chunk_size', default=DEFAULT_PARENT_CHUNK_SIZE)
     debug_logger.info("chunk_size: %s", chunk_size)
 
+    debug_logger.info(f"Request files: {req.files}")
+    debug_logger.info(f"Request form: {req.form}")
     # 增加上传文件的功能和上传文件的检查解析
     file_status = {}
     if faqs is None:

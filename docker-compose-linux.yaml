@@ -21,7 +21,7 @@ services:
         su elasticsearch -c '/usr/share/elasticsearch/bin/elasticsearch'
       "
     healthcheck:
-      test: curl --fail http://localhost:9200/_cat/health || exit 1
+      test: curl --fail http://0.0.0.0:9200/_cat/health || exit 1
       interval: 10s
       timeout: 20s
       retries: 3
@@ -36,7 +36,7 @@ services:
       - ETCD_SNAPSHOT_COUNT=50000
     volumes:
       - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/etcd:/etcd
-    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    command: etcd -advertise-client-urls=http://0.0.0.0:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
     healthcheck:
       test: ["CMD", "etcdctl", "endpoint", "health"]
       interval: 10s
@@ -56,7 +56,7 @@ services:
       - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
     command: minio server /minio_data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:9000/minio/health/live"]
       interval: 10s
       timeout: 20s
       retries: 3
@@ -78,7 +78,7 @@ services:
     volumes:
       - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/milvus:/var/lib/milvus
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:9091/healthz"]
       interval: 10s
       start_period: 90s
       timeout: 20s
@@ -104,7 +104,7 @@ services:
 
   qanything_local:
     container_name: qanything-container-local
-    image: xixihahaliu01/qanything-linux:v1.5.1
+    image: docker.cnb.cool/yumicodekkk/docker-images:torch2.7-cuda12.1-cudnn8-onnxgpu-1.21.1-qanything
     command: /bin/bash -c "cd /workspace/QAnything && bash scripts/entrypoint.sh"
     privileged: true
     shm_size: '8gb'
@@ -125,6 +125,13 @@ services:
         condition: service_started
       elasticsearch:
         condition: service_healthy
+    deploy:                       # 添加 GPU 资源限制
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     tty: true
     stdin_open: true
 

@@ -1,12 +1,14 @@
 # 使用官方 Python 3.10.14 镜像作为基础镜像
-FROM python:3.10.14-slim
+FROM diffusers/diffusers-onnxruntime-cuda:latest
 # 安装 vim
+RUN sed -i -E 's#http://archive.ubuntu.com/ubuntu#http://mirrors.cloud.tencent.com/ubuntu#g' /etc/apt/sources.list
 RUN apt-get update && apt-get install -y \
     vim \
     wget \
     htop \
     build-essential \
     procps \
+    python3.10-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 创建TikToken缓存目录
@@ -19,6 +21,7 @@ RUN wget -O /opt/tiktoken_cache/$(echo -n $TIKTOKEN_URL | sha1sum | head -c 40) 
 # 设置环境变量指向TikToken缓存目录
 ENV TIKTOKEN_CACHE_DIR=/opt/tiktoken_cache
 
+RUN pip config set global.index-url https://mirrors.cloud.tencent.com/pypi/simple
 # 复制 requirements.txt 文件到容器中
 COPY requirements.txt /tmp/requirements.txt
 
@@ -35,6 +38,6 @@ WORKDIR /workspace
 # 清理 APT 缓存
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN pip install httpx==0.27.0
 # 设置默认命令
 CMD ["/bin/bash"]
-
